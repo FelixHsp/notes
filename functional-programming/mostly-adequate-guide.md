@@ -169,3 +169,80 @@ httpGet('/post/2', (json, err) => renderPost(json, err));
  */
 httpGet('/post/2', renderPost);
 ```
+
+## 第 3 章 纯函数的好处
+纯函数的概念：纯函数是这样一种函数，即相同的输入，永远会得到相同的输出，而且没有任何可观察的副作用。
+
+slice 和 splice 这两个函数的作用都是分割数组，但它们各自的方式却大不同。slice 符合纯函数的定义是因为对相同的输入它保证能返回相同的输出。而 splice 却会嚼烂调用它的那个数组，然后再吐出来；这就会产生可观察到的副作用，即这个数组永久地改变了。
+
+```typescript
+var xs = [1,2,3,4,5];
+// 纯的
+xs.slice(0,3);
+//=> [1,2,3]
+
+xs.slice(0,3);
+//=> [1,2,3]
+
+xs.slice(0,3);
+//=> [1,2,3]
+
+
+// 不纯的
+xs.splice(0,3);
+//=> [1,2,3]
+
+xs.splice(0,3);
+//=> [4,5]
+
+xs.splice(0,3);
+//=> []
+```
+
+再举一个例子：
+```typescript
+var minimum = 21;
+// 不纯的 因为 minimum 可能受外界影响而改变
+var checkAge = function(age) {
+  return age >= minimum;
+};
+
+
+// 纯的
+var checkAge = function(age) {
+  var minimum = 21;
+  return age >= minimum;
+};
+```
+
+可缓存性（Cacheable），纯函数总能够根据输入来做缓存。
+```typescript
+var memoize = function(f) {
+  var cache = {};
+
+  return function() {
+    var arg_str = JSON.stringify(arguments);
+    cache[arg_str] = cache[arg_str] || f.apply(f, arguments);
+    return cache[arg_str];
+  };
+};
+
+var squareNumber  = memoize(function(x){ return x*x; });
+
+squareNumber(4);
+//=> 16
+
+squareNumber(4); // 从缓存中读取输入值为 4 的结果
+//=> 16
+
+
+var pureHttpCall = memoize(function(url, params){
+  return function() { return $.getJSON(url, params); }
+});
+
+const post = pureHttpCall('/post/2', {});
+// 第一次执行函数会发出请求
+
+pureHttpCall('/post/2', {});
+// 第二次执行函数会取出缓存的请求函数：(() => promise)()
+```
